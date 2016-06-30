@@ -118,7 +118,8 @@ class ThreatConnectReport(Report):
         try:
             indicator.commit()
         except RuntimeError as e:
-            raise CuckooReportError('Failed to commit indicator: {}'.format(e))
+            if not re.search('exclusion list', e):
+                raise CuckooReportError('Failed to commit indicator: {}'.format(e))
 
     def import_network(self, type):
         """Loop through all connections and import all source and destination indicators.
@@ -237,13 +238,14 @@ class ThreatConnectReport(Report):
                     fo_date = self.results.get('info').get('started')[:10]
                     indicator.add_file_occurrence(file_data.get('name'), fo_date=fo_date)
 
-                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident_id)
+                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, self.incident_id)
 
                 # Commit the changes to ThreatConnect
                 try:
                     indicator.commit()
                 except RuntimeError as e:
-                    raise CuckooReportError('Failed to commit indicator: {}'.format(e))
+                    if not re.search('exclusion list', e):
+                        raise CuckooReportError('Failed to commit indicator: {}'.format(e))
 
     def run(self, results):
         """Upload indicators and incident via ThreatConnect SDK.
