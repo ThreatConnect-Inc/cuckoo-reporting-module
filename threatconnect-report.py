@@ -20,7 +20,6 @@ import re
 import socket
 
 import ipaddress
-
 import threatconnect
 
 from lib.cuckoo.common.abstracts import Report
