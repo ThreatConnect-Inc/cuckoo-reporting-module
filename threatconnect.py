@@ -53,159 +53,218 @@ def reserved_ip(ip):
 class ThreatConnectReport(Report):
     """Reports indicators from analysis results to an instance of ThreatConnect."""
 
-    def run(self, results):
-        """Uploads indicators and incident via ThreatConnect SDK.
-        @param results: Cuckoo results dict.
+    def create_incident(self):
+        """Create an incident to represent the analysis in ThreatConnect.
+
         @raise CuckooReportError: if fails to write report.
         """
 
-        api_access_id = self.options.api_access_id
-        api_secret_key = self.options.api_secret_key
-        api_base_url = self.options.api_base_url
+        # Instantiate an incidents object
+        incidents = self.tc.incidents()
 
-        target_source = self.options.target_source
-
-        tc = threatconnect.ThreatConnect(api_access_id, api_secret_key, target_source, api_base_url)
-
-        incidents = tc.incidents()
-
+        # Get todays date and the filename of the analysis target
         date_today = datetime.date.today().strftime('%Y%m%d')
-        filename = results['target']['file']['name']
-        title = 'Cuckoo Analysis {}: {}'.format(date_today, filename)
-        incident = incidents.add(title, target_source)
+        if self.results.get('target').get('file').get('name'):
+            filename = self.results['target']['file']['name']
 
+        # Build a title for the incident
+        title = 'Cuckoo Analysis {}: {}'.format(date_today, filename)
+
+        # Add the title to the object
+        incident = incidents.add(title, self.target_source)
+
+        # Get the full timestamp for the current time and set the event date
         date_today_iso = datetime.datetime.now().isoformat()
         incident.set_event_date(date_today_iso)
 
-        analysis_id = results['info']['id']
+        # Add the analysis ID to an attribute
+        if self.results.get('info').get('id'):
+            analysis_id = self.results.get('info').get('id')
         incident.add_attribute('Analysis ID', analysis_id)
 
-        report_link = 'http://cuckoo01.labs.tc/analysis/{}/'.format(analysis_id)
-        incident.add_attribute('Report Link', report_link)
+        # Build a report link and record it in the Source attribute
+        report_link = self.report_link_template.format(analysis_id)
+        incident.add_attribute('Source', report_link)
 
+        # Commit the changes to ThreatConnect
         try:
             incident.commit()
-        except (RuntimeError) as e:
-            raise CuckooReportError("Failed to commit incident: {}".format(e))
+        except RuntimeError as e:
+            raise CuckooReportError('Failed to commit incident: {}'.format(e))
 
+        # Load the attributes into the incident object
         incident.load_attributes()
+
+        # Mark all Cuckoo attributes with DO NOT SHARE security label
         for attribute in incident.attributes:
-            if attribute.type == 'Analysis ID' or attribute.type == 'Report Link':
+            if attribute.type == 'Analysis ID' or attribute.type == 'Source':
                 attribute.add_security_label('DO NOT SHARE')
 
+        # Commit the changes to ThreatConnect
         try:
             incident.commit()
-        except (RuntimeError) as e:
-            raise CuckooReportError("Failed to commit incident: {}".format(e))
+        except RuntimeError as e:
+            raise CuckooReportError('Failed to commit incident: {}'.format(e))
+        else:
+            return incident.id
 
-        indicators = tc.indicators()
+    def upload_indicator(self, raw_indicator):
+        """Upload one indicator to ThreatConnect."""
+        indicators = self.tc.indicators()
+        indicator = indicators.add(raw_indicator, self.target_source)
+        indicator.associate_group(threatconnect.ResourceType.INCIDENTS, self.incident_id)
 
-        for conn in results['network']['udp']:
-            if not reserved_ip(conn['src']):
-                indicator = indicators.add(conn['src'], target_source)
-                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
-                try:
-                    indicator.commit()
-                except (RuntimeError) as e:
-                    raise CuckooReportError("Failed to commit indicator: {}".format(e))
-            if not reserved_ip(conn['dst']):
-                indicator = indicators.add(conn['dst'], target_source)
-                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
-                try:
-                    indicator.commit()
-                except (RuntimeError) as e:
-                    raise CuckooReportError("Failed to commit indicator: {}".format(e))
+        # Commit the changes to ThreatConnect
+        try:
+            indicator.commit()
+        except RuntimeError as e:
+            raise CuckooReportError('Failed to commit indicator: {}'.format(e))
 
-        for conn in results['network']['http']:
-            host = re.sub(':\d+', '', conn['host'])
+    def import_network(self, incident_id, type):
+        """Loop through all connections and import all source and destination indicators.
+
+        @param incident_id: Analysis incident ID.
+        @param type: protocol, tcp or udp
+        @raise CuckooReportError: if fails to write indicator.
+        """
+        for conn in self.results.get('network', list()).get(type, list()):
+
+            # Import the source
+            if not reserved_ip(conn.get('src')):
+                self.upload_indicator(conn.get('src'))
+
+            # Import the destination
+            if not reserved_ip(conn.get('dst')):
+                self.upload_indicator(conn.get('dst'))
+
+    def import_network_http(self, incident_id):
+        """Loop through all HTTP network connections and import all HTTP indicators.
+
+        @param incident_id: Analysis incident ID.
+        @raise CuckooReportError: if fails to write indicator.
+        """
+        # Loop through all HTTP network connections
+        for conn in self.results.get('network', list()).get('http', list()):
+
+            # Remove port number from host
+            host = re.sub(':\d+', '', conn.get('host'))
+
+            # Check if the host is an IP address
             if ip(host):
+
+                # Check if the IP address is reserved
                 if not reserved_ip(host):
-                    indicator = indicators.add(host, target_source)
-                    indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
-                    try:
-                        indicator.commit()
-                    except (RuntimeError) as e:
-                        raise CuckooReportError("Failed to commit indicator: {}".format(e))
-            indicator = indicators.add(conn['uri'], target_source)
-            indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
-            try:
-                indicator.commit()
-            except (RuntimeError) as e:
-                raise CuckooReportError("Failed to commit indicator: {}".format(e))
+                    self.upload_indicator(host)
 
-        for conn in results['network']['tcp']:
-            if not reserved_ip(conn['src']):
-                indicator = indicators.add(conn['src'], target_source)
-                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
-                try:
-                    indicator.commit()
-                except (RuntimeError) as e:
-                    raise CuckooReportError("Failed to commit indicator: {}".format(e))
-            if not reserved_ip(conn['dst']):
-                indicator = indicators.add(conn['dst'], target_source)
-                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
-                try:
-                    indicator.commit()
-                except (RuntimeError) as e:
-                    raise CuckooReportError("Failed to commit indicator: {}".format(e))
+            # Import the URL indicator
+            if conn.get('uri'):
+                self.upload_indicator(conn.get('uri'))
 
-        for host in results['network']['hosts']:
+    def import_network_hosts(self, incident_id):
+        """Loop through all network hosts and import all network host indicators.
+
+        @param incident_id: Analysis incident ID.
+        @raise CuckooReportError: if fails to write indicator.
+        """
+        for host in self.results.get('network', list()).get('hosts', list()):
+
+            # Check if the host is an IP address
             if ip(host):
+
+                # Check if the IP address is reserved
                 if not reserved_ip(host):
-                    indicator = indicators.add(host, target_source)
-                    indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
-                    try:
-                        indicator.commit()
-                    except (RuntimeError) as e:
-                        raise CuckooReportError("Failed to commit indicator: {}".format(e))
+                    self.upload_indicator(host)
+
             else:
-                indicator = indicators.add(host, target_source)
-                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
+                self.upload_indicator(host)
+
+    def import_network_dns(self, incident_id):
+        """Loop through all DNS connections and import all request and answer indicators.
+
+        @param incident_id: Analysis incident ID.
+        @raise CuckooReportError: if fails to write indicator.
+        """
+        # Loop through all DNS request connections
+        for conn in self.results.get('network', list()).get('dns', list()):
+
+            # Record the DNS request
+            self.upload_indicator(conn.get('request'))
+
+            # Record all the answers
+            for answer in conn.get('answers', list()):
+                self.upload_indicator(answer)
+
+    def import_network_domains(self, incident_id):
+        """Loop through all domains and import everything as host and address indicators.
+
+        @param incident_id: Analysis incident ID.
+        @raise CuckooReportError: if fails to write indicator.
+        """
+        for domain in self.results.get('network', list()).get('domains', list()):
+
+            # If an IP is available, import it
+            if domain.get('ip'):
+                if not reserved_ip(domain.get('ip')):
+                    self.upload_indicator(domain.get('ip'))
+
+            # If domain is available, import it
+            if domain.get('domain'):
+                self.upload_indicator(domain.get('domain'))
+
+    def import_file(self, incident_id):
+        """Import file indicator.
+
+        @param incident_id: Analysis incident ID.
+        @raise CuckooReportError: if fails to write indicator.
+        """
+        if self.results.get('target').get('category') == 'file':
+            if self.results.get('target').get('file'):
+
+                indicators = self.tc.indicators()
+
+                file_data = self.results.get('target').get('file')
+
+                # Import all the hashes
+                indicator = indicators.add(file_data.get('md5'), self.target_source)
+                indicator.set_indicator(file_data.get('sha1'))
+                indicator.set_indicator(file_data.get('sha256'))
+
+                # Set the file size
+                indicator.set_size(file_data.get('size'))
+
+                # If there is a started time, set this as a file occurrence along with the filename
+                if self.results.get('info').get('started'):
+                    fo_date = self.results.get('info').get('started')[:10]
+                    indicator.add_file_occurrence(file_data.get('name'), fo_date=fo_date)
+
+                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident_id)
+
+                # Commit the changes to ThreatConnect
                 try:
                     indicator.commit()
-                except (RuntimeError) as e:
-                    raise CuckooReportError("Failed to commit indicator: {}".format(e))
+                except RuntimeError as e:
+                    raise CuckooReportError('Failed to commit indicator: {}'.format(e))
 
-        for conn in results['network']['dns']:
-            indicator = indicators.add(conn['request'], target_source)
-            indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
-            try:
-                indicator.commit()
-            except (RuntimeError) as e:
-                raise CuckooReportError("Failed to commit indicator: {}".format(e))
-            for answer in conn['answers']:
-                indicator = indicators.add(conn['request'], target_source)
-                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
-                try:
-                    indicator.commit()
-                except (RuntimeError) as e:
-                    raise CuckooReportError("Failed to commit indicator: {}".format(e))
+    def run(self, results):
+        """Upload indicators and incident via ThreatConnect SDK.
 
-        for domain in results['network']['domains']:
-            if domain['ip']:
-                if not reserved_ip(domain['ip']):
-                    indicator = indicators.add(domain['ip'], target_source)
-                    indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
-                    try:
-                        indicator.commit()
-                    except (RuntimeError) as e:
-                        raise CuckooReportError("Failed to commit indicator: {}".format(e))
-            indicator = indicators.add(domain['domain'], target_source)
-            indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
-            try:
-                indicator.commit()
-            except (RuntimeError) as e:
-                raise CuckooReportError("Failed to commit indicator: {}".format(e))
+        @param results: Cuckoo results dict.
+        """
+        api_access_id = self.options.api_access_id
+        api_secret_key = self.options.api_secret_key
+        api_base_url = self.options.api_base_url
+        self.target_source = self.options.target_source
+        self.tc = threatconnect.ThreatConnect(api_access_id, api_secret_key,
+                                              self.options.target_source, api_base_url)
+        self.report_link_template = self.options.report_link_template
+        self.results = results
 
-        if results['target']['category'] == 'file':
-            file_data = results['target']['file']
-            indicator = indicators.add(file_data['md5'], target_source)
-            indicator.set_indicator(file_data['sha1'])
-            indicator.set_indicator(file_data['sha256'])
-            indicator.set_size(file_data['size'])
-            fo_date = results['info']['started'][:10]
-        indicator.add_file_occurrence(file_data['name'], fo_path=None, fo_date=fo_date)
-            try:
-                indicator.commit()
-            except (RuntimeError) as e:
-                raise CuckooReportError("Failed to commit indicator: {}".format(e))
+        self.incident_id = self.create_incident()
+
+        self.import_network('udp')
+        self.import_network('tcp')
+        self.import_network_http()
+        self.import_network_hosts()
+        self.import_network_dns()
+        self.import_network_domains()
+        self.import_file()
