@@ -4,7 +4,7 @@ import socket
 
 import ipaddress
 
-from threatconnect import ThreatConnect, ResourceType
+import threatconnect
 
 from lib.cuckoo.common.abstracts import Report
 from lib.cuckoo.common.exceptions import CuckooReportError
@@ -55,15 +55,11 @@ class ThreatConnectReport(Report):
 
         api_access_id = self.options.api_access_id
         api_secret_key = self.options.api_secret_key
-        api_default_org = self.options.api_default_org
         api_base_url = self.options.api_base_url
 
         target_source = self.options.target_source
 
-        tc = ThreatConnect(api_access_id,
-                           api_secret_key,
-                           api_default_org,
-                           api_base_url)
+        tc = threatconnect.ThreatConnect(api_access_id, api_secret_key, target_source, api_base_url)
 
         incidents = tc.incidents()
 
@@ -101,14 +97,14 @@ class ThreatConnectReport(Report):
         for conn in results['network']['udp']:
             if not reserved_ip(conn['src']):
                 indicator = indicators.add(conn['src'], target_source)
-                indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
                 try:
                     indicator.commit()
                 except (RuntimeError) as e:
                     raise CuckooReportError("Failed to commit indicator: {}".format(e))
             if not reserved_ip(conn['dst']):
                 indicator = indicators.add(conn['dst'], target_source)
-                indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
                 try:
                     indicator.commit()
                 except (RuntimeError) as e:
@@ -119,13 +115,13 @@ class ThreatConnectReport(Report):
             if ip(host):
                 if not reserved_ip(host):
                     indicator = indicators.add(host, target_source)
-                    indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+                    indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
                     try:
                         indicator.commit()
                     except (RuntimeError) as e:
                         raise CuckooReportError("Failed to commit indicator: {}".format(e))
             indicator = indicators.add(conn['uri'], target_source)
-            indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+            indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
             try:
                 indicator.commit()
             except (RuntimeError) as e:
@@ -134,14 +130,14 @@ class ThreatConnectReport(Report):
         for conn in results['network']['tcp']:
             if not reserved_ip(conn['src']):
                 indicator = indicators.add(conn['src'], target_source)
-                indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
                 try:
                     indicator.commit()
                 except (RuntimeError) as e:
                     raise CuckooReportError("Failed to commit indicator: {}".format(e))
             if not reserved_ip(conn['dst']):
                 indicator = indicators.add(conn['dst'], target_source)
-                indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
                 try:
                     indicator.commit()
                 except (RuntimeError) as e:
@@ -151,14 +147,14 @@ class ThreatConnectReport(Report):
             if ip(host):
                 if not reserved_ip(host):
                     indicator = indicators.add(host, target_source)
-                    indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+                    indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
                     try:
                         indicator.commit()
                     except (RuntimeError) as e:
                         raise CuckooReportError("Failed to commit indicator: {}".format(e))
             else:
                 indicator = indicators.add(host, target_source)
-                indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
                 try:
                     indicator.commit()
                 except (RuntimeError) as e:
@@ -166,14 +162,14 @@ class ThreatConnectReport(Report):
 
         for conn in results['network']['dns']:
             indicator = indicators.add(conn['request'], target_source)
-            indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+            indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
             try:
                 indicator.commit()
             except (RuntimeError) as e:
                 raise CuckooReportError("Failed to commit indicator: {}".format(e))
             for answer in conn['answers']:
                 indicator = indicators.add(conn['request'], target_source)
-                indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+                indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
                 try:
                     indicator.commit()
                 except (RuntimeError) as e:
@@ -183,13 +179,13 @@ class ThreatConnectReport(Report):
             if domain['ip']:
                 if not reserved_ip(domain['ip']):
                     indicator = indicators.add(domain['ip'], target_source)
-                    indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+                    indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
                     try:
                         indicator.commit()
                     except (RuntimeError) as e:
                         raise CuckooReportError("Failed to commit indicator: {}".format(e))
             indicator = indicators.add(domain['domain'], target_source)
-            indicator.associate_group(ResourceType.INCIDENTS, incident.id)
+            indicator.associate_group(threatconnect.ResourceType.INCIDENTS, incident.id)
             try:
                 indicator.commit()
             except (RuntimeError) as e:
