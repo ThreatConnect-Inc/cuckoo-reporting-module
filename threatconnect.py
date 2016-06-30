@@ -1,3 +1,9 @@
+"""ThreatConnect reporting module for Cuckoo version 1.2.
+
+This module creates an incident in ThreatConnect representing the analysis, and then imports all
+network indicators found by Cuckoo and associates those indicators with the analysis.
+"""
+
 import datetime
 import re
 import socket
