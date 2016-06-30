@@ -51,7 +51,7 @@ def reserved_ip(ip):
 
 
 class ThreatConnectReport(Report):
-    """Delivers indicators from analysis results to an instance of ThreatConnect."""
+    """Reports indicators from analysis results to an instance of ThreatConnect."""
 
     def run(self, results):
         """Uploads indicators and incident via ThreatConnect SDK.
