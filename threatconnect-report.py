@@ -128,7 +128,7 @@ class ThreatConnectReport(Report):
         @param type: protocol, tcp or udp
         @raise CuckooReportError: if fails to write indicator.
         """
-        for conn in self.results.get('network', list()).get(type, list()):
+        for conn in self.results.get('network', dict()).get(type, dict()):
 
             # Import the source
             if not reserved_ip(conn.get('src')):
@@ -145,7 +145,7 @@ class ThreatConnectReport(Report):
         @raise CuckooReportError: if fails to write indicator.
         """
         # Loop through all HTTP network connections
-        for conn in self.results.get('network', list()).get('http', list()):
+        for conn in self.results.get('network', dict()).get('http', dict()):
 
             # Remove port number from host
             host = re.sub(':\d+', '', conn.get('host'))
@@ -167,7 +167,7 @@ class ThreatConnectReport(Report):
         @param incident_id: Analysis incident ID.
         @raise CuckooReportError: if fails to write indicator.
         """
-        for host in self.results.get('network', list()).get('hosts', list()):
+        for host in self.results.get('network', dict()).get('hosts', dict()):
 
             # Check if the host is an IP address
             if ip(host):
@@ -186,7 +186,7 @@ class ThreatConnectReport(Report):
         @raise CuckooReportError: if fails to write indicator.
         """
         # Loop through all DNS request connections
-        for conn in self.results.get('network', list()).get('dns', list()):
+        for conn in self.results.get('network', dict()).get('dns', dict()):
 
             # Record the DNS request
             self.upload_indicator(conn.get('request'))
@@ -201,7 +201,7 @@ class ThreatConnectReport(Report):
         @param incident_id: Analysis incident ID.
         @raise CuckooReportError: if fails to write indicator.
         """
-        for domain in self.results.get('network', list()).get('domains', list()):
+        for domain in self.results.get('network', dict()).get('domains', dict()):
 
             # If an IP is available, import it
             if domain.get('ip'):
