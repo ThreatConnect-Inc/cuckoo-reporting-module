@@ -16,9 +16,9 @@ Requirements
 
 This module is for Cuckoo Sandbox which can be obtained here: https://cuckoosandbox.org/
 
-The only python requirement is the threatconnect python module. This is installable from pypi:
+The only python requirements are the threatconnect and ipaddress python modules. This is installable from pypi:
 ```
-pip install threatconnect
+pip install threatconnect ipaddress
 ```
 
 The Basic product edition or higher with an API key is required to use this module.
