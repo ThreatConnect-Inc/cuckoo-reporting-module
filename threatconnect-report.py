@@ -120,7 +120,7 @@ class ThreatConnectReport(Report):
         except RuntimeError as e:
             raise CuckooReportError('Failed to commit indicator: {}'.format(e))
 
-    def import_network(self, incident_id, type):
+    def import_network(self, type):
         """Loop through all connections and import all source and destination indicators.
 
         @param incident_id: Analysis incident ID.
@@ -137,7 +137,7 @@ class ThreatConnectReport(Report):
             if not reserved_ip(conn.get('dst')):
                 self.upload_indicator(conn.get('dst'))
 
-    def import_network_http(self, incident_id):
+    def import_network_http(self):
         """Loop through all HTTP network connections and import all HTTP indicators.
 
         @param incident_id: Analysis incident ID.
@@ -160,7 +160,7 @@ class ThreatConnectReport(Report):
             if conn.get('uri'):
                 self.upload_indicator(conn.get('uri'))
 
-    def import_network_hosts(self, incident_id):
+    def import_network_hosts(self):
         """Loop through all network hosts and import all network host indicators.
 
         @param incident_id: Analysis incident ID.
@@ -178,7 +178,7 @@ class ThreatConnectReport(Report):
             else:
                 self.upload_indicator(host)
 
-    def import_network_dns(self, incident_id):
+    def import_network_dns(self):
         """Loop through all DNS connections and import all request and answer indicators.
 
         @param incident_id: Analysis incident ID.
@@ -194,7 +194,7 @@ class ThreatConnectReport(Report):
             for answer in conn.get('answers', list()):
                 self.upload_indicator(answer)
 
-    def import_network_domains(self, incident_id):
+    def import_network_domains(self):
         """Loop through all domains and import everything as host and address indicators.
 
         @param incident_id: Analysis incident ID.
@@ -211,7 +211,7 @@ class ThreatConnectReport(Report):
             if domain.get('domain'):
                 self.upload_indicator(domain.get('domain'))
 
-    def import_file(self, incident_id):
+    def import_file(self):
         """Import file indicator.
 
         @param incident_id: Analysis incident ID.
