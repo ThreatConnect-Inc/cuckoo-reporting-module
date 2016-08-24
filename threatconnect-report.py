@@ -36,30 +36,6 @@ def ip(indicator):
         return True
 
 
-def reserved_ip(ip):
-    """Check if an IP address is a reserved address or not."""
-    ip_int = int(ipaddress.IPv4Address(unicode(ip)))
-    if (ip_int <= 16777215 or
-            167772160 <= ip_int <= 184549375 or
-            1681915904 <= ip_int <= 1686110207 or
-            2130706432 <= ip_int <= 2147483647 or
-            2851995648 <= ip_int <= 2852061183 or
-            2886729728 <= ip_int <= 2887778303 or
-            3221225472 <= ip_int <= 3221225727 or
-            3221225984 <= ip_int <= 3221226239 or
-            3227017984 <= ip_int <= 3227018239 or
-            3232235520 <= ip_int <= 3232301055 or
-            3323068416 <= ip_int <= 3323199487 or
-            3325256704 <= ip_int <= 3325256959 or
-            3405803776 <= ip_int <= 3405804031 or
-            3758096384 <= ip_int <= 4026531839 or
-            4026531840 <= ip_int <= 4294967294 or
-            ip_int == 4294967295):
-        return True
-    else:
-        return False
-
-
 class ThreatConnectReport(Report):
     """Reports indicators from analysis results to an instance of ThreatConnect."""
 
@@ -141,12 +117,10 @@ class ThreatConnectReport(Report):
         for conn in self.results.get('network', dict()).get(type, dict()):
 
             # Import the source
-            if not reserved_ip(conn.get('src')):
-                self.upload_indicator(conn.get('src'))
+            self.upload_indicator(conn.get('src'))
 
             # Import the destination
-            if not reserved_ip(conn.get('dst')):
-                self.upload_indicator(conn.get('dst'))
+            self.upload_indicator(conn.get('dst'))
 
     def import_network_http(self):
         """Loop through all HTTP network connections and import all HTTP indicators.
@@ -162,10 +136,7 @@ class ThreatConnectReport(Report):
 
             # Check if the host is an IP address
             if ip(host):
-
-                # Check if the IP address is reserved
-                if not reserved_ip(host):
-                    self.upload_indicator(host)
+                self.upload_indicator(host)
 
             # Import the URL indicator
             if conn.get('uri'):
@@ -181,10 +152,7 @@ class ThreatConnectReport(Report):
 
             # Check if the host is an IP address
             if ip(host):
-
-                # Check if the IP address is reserved
-                if not reserved_ip(host):
-                    self.upload_indicator(host)
+                self.upload_indicator(host)
 
             else:
                 self.upload_indicator(host)
@@ -215,8 +183,7 @@ class ThreatConnectReport(Report):
 
             # If an IP is available, import it
             if domain.get('ip'):
-                if not reserved_ip(domain.get('ip')):
-                    self.upload_indicator(domain.get('ip'))
+                self.upload_indicator(domain.get('ip'))
 
             # If domain is available, import it
             if domain.get('domain'):
