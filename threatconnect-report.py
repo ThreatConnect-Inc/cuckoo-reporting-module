@@ -118,13 +118,13 @@ class ThreatConnectReport(Report):
             # Import the source
             try:
                 self.upload_indicator(conn.get('src'))
-            except CuckooReportError:
+            except (CuckooReportError, RuntimeError):
                 pass
 
             # Import the destination
             try:
                 self.upload_indicator(conn.get('dst'))
-            except CuckooReportError:
+            except (CuckooReportError, RuntimeError):
                 pass
 
     def import_network_http(self):
@@ -143,14 +143,14 @@ class ThreatConnectReport(Report):
             if ip(host):
                 try:
                     self.upload_indicator(host)
-                except CuckooReportError:
+                except (CuckooReportError, RuntimeError):
                     pass
 
             # Import the URL indicator
             if conn.get('uri'):
                 try:
                     self.upload_indicator(conn.get('uri'))
-                except CuckooReportError:
+                except (CuckooReportError, RuntimeError):
                     pass
 
     def import_network_hosts(self):
@@ -165,13 +165,13 @@ class ThreatConnectReport(Report):
             if ip(host):
                 try:
                     self.upload_indicator(host)
-                except CuckooReportError:
+                except (CuckooReportError, RuntimeError):
                     pass
 
             else:
                 try:
                     self.upload_indicator(host)
-                except CuckooReportError:
+                except (CuckooReportError, RuntimeError):
                     pass
 
     def import_network_dns(self):
@@ -186,14 +186,14 @@ class ThreatConnectReport(Report):
             # Record the DNS request
             try:
                 self.upload_indicator(conn.get('request'))
-            except CuckooReportError:
+            except (CuckooReportError, RuntimeError):
                 pass
 
             # Record all the answers
             for answer in conn.get('answers', list()):
                 try:
                     self.upload_indicator(answer)
-                except CuckooReportError:
+                except (CuckooReportError, RuntimeError):
                     pass
 
     def import_network_domains(self):
@@ -208,14 +208,14 @@ class ThreatConnectReport(Report):
             if domain.get('ip'):
                 try:
                     self.upload_indicator(domain.get('ip'))
-                except CuckooReportError:
+                except (CuckooReportError, RuntimeError):
                     pass
 
             # If domain is available, import it
             if domain.get('domain'):
                 try:
                     self.upload_indicator(domain.get('domain'))
-                except CuckooReportError:
+                except (CuckooReportError, RuntimeError):
                     pass
 
     def import_file(self):
@@ -277,5 +277,5 @@ class ThreatConnectReport(Report):
         self.import_network_domains()
         try:
             self.import_file()
-        except CuckooReportError:
+        except (CuckooReportError, RuntimeError):
             pass
