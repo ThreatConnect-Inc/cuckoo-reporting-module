@@ -17,7 +17,6 @@ network indicators found by Cuckoo and associates those indicators with the anal
 
 import datetime
 import re
-import socket
 
 import ipaddress
 import threatconnect
@@ -29,8 +28,8 @@ from lib.cuckoo.common.exceptions import CuckooReportError
 def ip(indicator):
     """Check if an indicator is an IP address or not."""
     try:
-        socket.inet_aton(indicator)
-    except socket.error:
+        ipaddress.ip_address(indicator)
+    except ValueError:
         return False
     else:
         return True
