@@ -76,22 +76,22 @@ class ThreatConnectReport(Report):
             incident.commit()
         except RuntimeError as e:
             raise CuckooReportError('Failed to commit incident: {}'.format(e))
-
-        # Load the attributes into the incident object
-        incident.load_attributes()
-
-        # Mark all Cuckoo attributes with DO NOT SHARE security label
-        for attribute in incident.attributes:
-            if attribute.type == 'Analysis ID' or attribute.type == 'Source':
-                attribute.add_security_label('DO NOT SHARE')
-
-        # Commit the changes to ThreatConnect
-        try:
-            incident.commit()
-        except RuntimeError as e:
-            raise CuckooReportError('Failed to commit incident: {}'.format(e))
         else:
-            return incident.id
+            # Load the attributes into the incident object
+            incident.load_attributes()
+
+            # Mark all Cuckoo attributes with DO NOT SHARE security label
+            for attribute in incident.attributes:
+                if attribute.type == 'Analysis ID' or attribute.type == 'Source':
+                    attribute.add_security_label('DO NOT SHARE')
+
+            # Commit the changes to ThreatConnect
+            try:
+                incident.commit()
+            except RuntimeError as e:
+                raise CuckooReportError('Failed to commit incident: {}'.format(e))
+            else:
+                return incident.id
 
     def upload_indicator(self, raw_indicator):
         """Upload one indicator to ThreatConnect."""
