@@ -2,7 +2,7 @@
 
 Cuckoo reporting module for version 1.2 stable
 
-Cuckoo Sandbox is an open source automated malware analysis system. It provides a modular system
+[Cuckoo Sandbox](https://cuckoosandbox.org/) is an open source automated malware analysis system. It provides a modular system
 for reporting analysis results of a submitted sample. This module is installed directly into
 the reporting modules directory of a Cuckoo instance. It parses the analysis results and creates
 an incident in ThreatConnect that represents the analysis session. It also parses out network indicators
@@ -22,7 +22,7 @@ pip install threatconnect ipaddress
 ```
 
 The Basic product edition or higher with an API key is required to use this module.
-For information on signing up for an account, please visit https://www.threatconnect.com/platform/editions/
+For information on signing up for an account, please visit https://www.threatconnect.com/products/
 
 Installation
 ------
